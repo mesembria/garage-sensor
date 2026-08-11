@@ -43,6 +43,18 @@ def test_arc_respects_offset():
     assert sorted(gauge.arc_pixels(3, 12, 6, True)) == [5, 6, 7]
 
 
+def test_arc_closes_symmetrically_for_an_even_lit_count():
+    # An even lit count can't split evenly around a single pivot pixel; the
+    # tie is biased clockwise, so index 0 gets three neighbours on its
+    # clockwise side (1, 2, 3) and only two on its counter-clockwise side
+    # (10, 11). This is exactly the situation a ring swap re-exercises.
+    assert sorted(gauge.arc_pixels(6, 12, 0, True)) == [0, 1, 2, 3, 10, 11]
+
+
+def test_arc_respects_offset_and_counterclockwise_direction():
+    assert sorted(gauge.arc_pixels(4, 12, 3, False)) == [1, 2, 3, 4]
+
+
 def test_arc_endpoints():
     assert gauge.arc_pixels(0, 12, 0, True) == []
     assert sorted(gauge.arc_pixels(12, 12, 0, True)) == list(range(12))

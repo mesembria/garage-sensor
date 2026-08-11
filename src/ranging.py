@@ -34,7 +34,13 @@ class Ranger:
         return self._current
 
     def push(self, raw_mm):
-        """Feed one raw reading. Returns the filtered distance in mm, or None."""
+        """Feed one raw reading. Returns the filtered distance in mm, or None.
+
+        A no-target reading does not clear the pending-outlier buffer, so a
+        sequence like outlier, miss, outlier, outlier still adopts once
+        outlier_persist agreeing samples have been seen. This is intentional:
+        a momentary miss between agreeing outliers shouldn't restart the count.
+        """
         if raw_mm is None or raw_mm <= 0 or raw_mm > self._max_valid_mm:
             self._misses += 1
             if self._misses >= self._no_target_clears:
