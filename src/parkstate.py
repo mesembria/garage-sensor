@@ -21,6 +21,7 @@ class ParkStateMachine:
         self._recover_good_reads = recover_good_reads
         self._calibrate_hold_s = calibrate_hold_s
         self._state = gauge.IDLE
+        self._parking = gauge.IDLE
         self._stillness = StillnessDetector(still_mm=still_mm,
                                             still_seconds=still_seconds,
                                             wake_move_mm=wake_move_mm)
@@ -33,6 +34,9 @@ class ParkStateMachine:
     def update(self, distance_mm, stop_mm, now, button_down, read_ok):
         """Advance the machine one tick and return the new state."""
         parking = self._parking_state(distance_mm, stop_mm)
+        # _parking is the underlying classification used for hysteresis; _state is what
+        # the display shows and may be SETTLED.
+        self._parking = parking
 
         if parking == gauge.IDLE:
             self._stillness.reset()
@@ -55,7 +59,7 @@ class ParkStateMachine:
 
         # OVERSHOOT is treated as part of the stop zone so that backing out of it
         # returns to ARRIVED rather than APPROACHING, preventing display flicker.
-        in_stop_zone = self._state == gauge.ARRIVED or self._state == gauge.OVERSHOOT
+        in_stop_zone = self._parking == gauge.ARRIVED or self._parking == gauge.OVERSHOOT
         band = self._arrive_release_mm if in_stop_zone else self._arrive_tol_mm
 
         if abs(distance_mm - stop_mm) <= band:

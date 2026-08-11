@@ -95,3 +95,12 @@ def test_leaving_range_returns_to_idle_not_settled():
     step(m, 620, 0.0)
     step(m, 620, 10.0)
     assert step(m, None, 11.0) == gauge.IDLE
+
+
+def test_waking_from_settled_inside_the_release_band_returns_to_arrived():
+    m = ParkStateMachine(arrive_tol_mm=30, arrive_release_mm=60,
+                         wake_move_mm=50, still_seconds=10.0)
+    assert step(m, 600, 0.0) == gauge.ARRIVED
+    assert step(m, 600, 10.0) == gauge.SETTLED
+    assert step(m, 655, 11.0) == gauge.ARRIVED
+    assert step(m, 655, 12.0) == gauge.ARRIVED
