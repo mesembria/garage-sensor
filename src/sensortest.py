@@ -31,7 +31,7 @@ SAMPLE_INTERVAL_S = 0.1
 MAX_VALID_MM = 4000
 
 uart = busio.UART(board.TX, board.RX, baudrate=9600, timeout=0.2)
-finder = Rangefinder(adafruit_us100.US100(uart))
+finder = Rangefinder(adafruit_us100.US100(uart), uart)
 
 print("temperature C:", finder.read_temperature_c())
 
