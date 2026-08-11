@@ -29,6 +29,7 @@ class ParkStateMachine:
         self._goods = 0
         self._in_fault = False
         self._button_since = None
+        self._captured_this_hold = False
         self._calibrated_this_tick = None
 
     @property
@@ -48,6 +49,7 @@ class ParkStateMachine:
         if self._track_health(read_ok):
             self._stillness.reset()
             self._button_since = None
+            self._captured_this_hold = False
             # Early return, before _parking_state runs: reset _parking so a fault
             # doesn't leave a stale wide release band in place for the tick after
             # recovery. The first good reading afterward must be judged as a fresh
@@ -114,6 +116,7 @@ class ParkStateMachine:
         # distance_mm > wake_mm before anything else and returns IDLE forever.
         if not button_down or distance_mm is None or distance_mm > self._wake_mm:
             self._button_since = None
+            self._captured_this_hold = False
             return False
 
         if self._button_since is None:
@@ -123,8 +126,16 @@ class ParkStateMachine:
         if (now - self._button_since) < self._calibrate_hold_s:
             return False
 
-        if self._state != gauge.CALIBRATE:
+        # An explicit latch, not `self._state != gauge.CALIBRATE`: _state is
+        # last tick's *display* state, and if any other state intervened for a
+        # single tick while the button stayed held (e.g. a one-tick FAULT that
+        # cleared itself), that check would read as "not yet captured" and
+        # reopen the guard, letting a single held press capture and write NVM
+        # twice. The latch is set on capture and cleared only where
+        # _button_since is cleared, so it tracks the hold itself.
+        if not self._captured_this_hold:
             self._calibrated_this_tick = distance_mm
+            self._captured_this_hold = True
         return True
 
     def _parking_state(self, distance_mm, stop_mm):

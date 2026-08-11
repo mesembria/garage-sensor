@@ -149,6 +149,22 @@ def test_calibration_is_captured_only_once():
     assert m.calibration_captured is None
 
 
+# The one-shot guard used to read self._state ("did last tick display
+# CALIBRATE?") rather than an explicit latch. self._state means "what the
+# display showed," not "did this hold already capture," and any single tick
+# where something else set the display state while the button stayed held
+# and _button_since survived would reopen the guard. Mutating _state directly
+# simulates such a tick without needing a real code path that produces one.
+def test_capture_does_not_refire_if_a_display_tick_intervenes_mid_hold():
+    m = ParkStateMachine(calibrate_hold_s=2.0)
+    step(m, 850, 0.0, button_down=True)
+    step(m, 850, 2.0, button_down=True)
+    assert m.calibration_captured == 850
+    m._state = gauge.SETTLED
+    step(m, 850, 2.1, button_down=True)
+    assert m.calibration_captured is None
+
+
 def test_releasing_the_button_resets_the_hold():
     m = ParkStateMachine(calibrate_hold_s=2.0)
     step(m, 850, 0.0, button_down=True)
