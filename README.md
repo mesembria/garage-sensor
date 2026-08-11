@@ -77,4 +77,5 @@ ring — the pixel walk prints and lights each position in turn.
 | Solid red ring | Stop |
 | Flashing red ring | Too far, back up |
 | Slow blue pulse | Sensor fault — the reading is not trustworthy |
+| One green pixel rotating | Calibration in progress — keep holding the button |
 | Two rotating amber pixels | Never calibrated; hold the button while parked |
