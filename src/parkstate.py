@@ -107,7 +107,12 @@ class ParkStateMachine:
 
     def _track_button(self, distance_mm, now, button_down):
         """Update the calibration hold timer. Returns True while calibrating."""
-        if not button_down or distance_mm is None:
+        # A capture beyond wake_mm is rejected outright, the same as no target
+        # at all: MAX_VALID_MM gates capture, but WAKE_MM gates the display, and
+        # a stop point stored beyond WAKE_MM would be confirmed and written to
+        # NVM yet never be reachable again, since _parking_state checks
+        # distance_mm > wake_mm before anything else and returns IDLE forever.
+        if not button_down or distance_mm is None or distance_mm > self._wake_mm:
             self._button_since = None
             return False
 

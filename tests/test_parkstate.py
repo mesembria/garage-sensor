@@ -170,6 +170,16 @@ def test_no_calibration_without_a_valid_distance():
     assert m.calibration_captured is None
 
 
+# A capture beyond wake_mm would be confirmed and written to NVM, then never
+# be reachable again: _parking_state checks distance_mm > wake_mm first and
+# returns IDLE forever, silently disabling the unit.
+def test_no_calibration_beyond_wake_range():
+    m = ParkStateMachine(calibrate_hold_s=2.0, wake_mm=3000)
+    step(m, 3500, 0.0, button_down=True)
+    assert step(m, 3500, 2.0, button_down=True) != gauge.CALIBRATE
+    assert m.calibration_captured is None
+
+
 # Discriminates the FAULT branch's `self._parking = gauge.IDLE` reset: 650mm is
 # 50mm from the stop point, inside arrive_release_mm (60) but outside
 # arrive_tol_mm (30). Without the reset, the machine would still think it was
