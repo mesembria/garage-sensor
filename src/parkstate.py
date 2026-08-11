@@ -38,11 +38,12 @@ class ParkStateMachine:
         if distance_mm < stop_mm - self._overshoot_mm:
             return gauge.OVERSHOOT
 
-        offset = abs(distance_mm - stop_mm)
-        if self._state == gauge.ARRIVED:
-            if offset <= self._arrive_release_mm:
-                return gauge.ARRIVED
-        elif offset <= self._arrive_tol_mm:
+        # OVERSHOOT is treated as part of the stop zone so that backing out of it
+        # returns to ARRIVED rather than APPROACHING, preventing display flicker.
+        in_stop_zone = self._state == gauge.ARRIVED or self._state == gauge.OVERSHOOT
+        band = self._arrive_release_mm if in_stop_zone else self._arrive_tol_mm
+
+        if abs(distance_mm - stop_mm) <= band:
             return gauge.ARRIVED
 
         return gauge.APPROACHING

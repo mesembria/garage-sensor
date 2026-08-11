@@ -48,3 +48,16 @@ def test_overshoot_recovers_to_arrived_when_backing_up():
     m = ParkStateMachine(arrive_tol_mm=30, overshoot_mm=50)
     step(m, 500, 0.0)
     assert step(m, 610, 0.1) == gauge.ARRIVED
+
+
+def test_backing_out_of_overshoot_returns_to_arrived_not_approaching():
+    m = ParkStateMachine(arrive_tol_mm=30, arrive_release_mm=60, overshoot_mm=50)
+    step(m, 545, 0.0)
+    assert m.state == gauge.OVERSHOOT
+    assert step(m, 551, 0.1) == gauge.ARRIVED
+
+
+def test_overshoot_still_triggers_from_approaching():
+    m = ParkStateMachine(arrive_tol_mm=30, arrive_release_mm=60, overshoot_mm=50)
+    assert step(m, 2000, 0.0) == gauge.APPROACHING
+    assert step(m, 500, 0.1) == gauge.OVERSHOOT
