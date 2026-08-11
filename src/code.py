@@ -66,8 +66,24 @@ machine = ParkStateMachine(arrive_tol_mm=ARRIVE_TOL_MM,
 stop_mm = settings.load(microcontroller.nvm)
 period = 1.0 / LOOP_HZ
 
+# CircuitPython's time.monotonic() is a single-precision float. Its ULP grows
+# with uptime, and by ~97 days it reaches 0.5s, at which point every
+# representable `now` is an exact multiple of the 2Hz OVERSHOOT flash period
+# and gauge.render's animation phase freezes. Feed the animation a clock that
+# is wrapped well before precision loss becomes visible: 4s is an exact
+# multiple of the 0.5s OVERSHOOT flash, the 2s FAULT pulse, and the 1s
+# CALIBRATE spin, so wrapping introduces no visible seam, and re-deriving it
+# from a small elapsed-ns value every tick keeps its resolution full-precision
+# forever. `machine.update` still gets an ever-increasing `now`, since
+# hysteresis and stillness timing must not wrap.
+BOOT_NS = time.monotonic_ns()
+PHASE_WRAP_NS = 4_000_000_000  # 4s: an exact multiple of every animation period
+
 while True:
-    started = time.monotonic()
+    tick_start_ns = time.monotonic_ns()
+    ticks_ns = tick_start_ns - BOOT_NS
+    started = ticks_ns / 1e9
+    phase_now = (ticks_ns % PHASE_WRAP_NS) / 1e9
 
     raw_mm = finder.read_mm()
     distance_mm = ranger.push(raw_mm)
@@ -85,12 +101,14 @@ while True:
 
     fraction = gauge.approach_fraction(distance_mm, stop_mm, APPROACH_SPAN_MM)
     frame = gauge.render(state, fraction, PIXEL_COUNT,
-                         PIXEL_ZERO_OFFSET, CLOCKWISE, started)
+                         PIXEL_ZERO_OFFSET, CLOCKWISE, phase_now)
 
     for index in range(PIXEL_COUNT):
         pixels[index] = frame[index]
     pixels.show()
 
-    elapsed = time.monotonic() - started
+    # monotonic_ns() throughout this tick, not monotonic(), so pacing never
+    # mixes the float32-degrading clock with the wrapped/full-precision one.
+    elapsed = (time.monotonic_ns() - tick_start_ns) / 1e9
     if elapsed < period:
         time.sleep(period - elapsed)
