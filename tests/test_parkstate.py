@@ -104,3 +104,67 @@ def test_waking_from_settled_inside_the_release_band_returns_to_arrived():
     assert step(m, 600, 10.0) == gauge.SETTLED
     assert step(m, 655, 11.0) == gauge.ARRIVED
     assert step(m, 655, 12.0) == gauge.ARRIVED
+
+
+def test_repeated_read_failures_enter_fault():
+    m = ParkStateMachine(max_consec_fails=5)
+    for i in range(4):
+        assert step(m, None, i * 0.1, read_ok=False) == gauge.IDLE
+    assert step(m, None, 0.5, read_ok=False) == gauge.FAULT
+
+
+def test_fault_clears_after_good_reads():
+    m = ParkStateMachine(max_consec_fails=2, recover_good_reads=3)
+    step(m, None, 0.0, read_ok=False)
+    assert step(m, None, 0.1, read_ok=False) == gauge.FAULT
+    assert step(m, 2000, 0.2) == gauge.FAULT
+    assert step(m, 2000, 0.3) == gauge.FAULT
+    assert step(m, 2000, 0.4) == gauge.APPROACHING
+
+
+def test_fault_outranks_parking_states():
+    m = ParkStateMachine(max_consec_fails=1)
+    assert step(m, 620, 0.0, read_ok=False) == gauge.FAULT
+
+
+def test_uncalibrated_when_no_stop_distance_stored():
+    m = ParkStateMachine()
+    assert step(m, 2000, 0.0, stop_mm=None) == gauge.UNCALIBRATED
+
+
+def test_holding_the_button_calibrates():
+    m = ParkStateMachine(calibrate_hold_s=2.0)
+    assert step(m, 850, 0.0, button_down=True) == gauge.APPROACHING
+    assert step(m, 850, 1.0, button_down=True) == gauge.APPROACHING
+    assert step(m, 850, 2.0, button_down=True) == gauge.CALIBRATE
+    assert m.calibration_captured == 850
+
+
+def test_calibration_is_captured_only_once():
+    m = ParkStateMachine(calibrate_hold_s=2.0)
+    step(m, 850, 0.0, button_down=True)
+    step(m, 850, 2.0, button_down=True)
+    assert m.calibration_captured == 850
+    step(m, 850, 2.1, button_down=True)
+    assert m.calibration_captured is None
+
+
+def test_releasing_the_button_resets_the_hold():
+    m = ParkStateMachine(calibrate_hold_s=2.0)
+    step(m, 850, 0.0, button_down=True)
+    step(m, 850, 1.0, button_down=False)
+    assert step(m, 850, 2.5, button_down=True) == gauge.APPROACHING
+
+
+def test_calibration_works_while_uncalibrated():
+    m = ParkStateMachine(calibrate_hold_s=2.0)
+    step(m, 850, 0.0, stop_mm=None, button_down=True)
+    assert step(m, 850, 2.0, stop_mm=None, button_down=True) == gauge.CALIBRATE
+    assert m.calibration_captured == 850
+
+
+def test_no_calibration_without_a_valid_distance():
+    m = ParkStateMachine(calibrate_hold_s=2.0)
+    step(m, None, 0.0, button_down=True)
+    assert step(m, None, 2.0, button_down=True) == gauge.IDLE
+    assert m.calibration_captured is None
