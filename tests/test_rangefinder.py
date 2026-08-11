@@ -32,13 +32,21 @@ def test_none_reading_becomes_none():
     assert Rangefinder(FakeSensor(distance=None)).read_mm() is None
 
 
-def test_zero_and_negative_readings_become_none():
-    assert Rangefinder(FakeSensor(distance=0.0)).read_mm() is None
-    assert Rangefinder(FakeSensor(distance=-3.0)).read_mm() is None
+def test_zero_and_negative_readings_pass_through_unchanged():
+    # Zero/negative/out-of-range readings are not sensor failures; they mean
+    # "no target," and it's Ranger's range gate that classifies them as such.
+    # Conflating them with a driver failure would let an empty bay look like
+    # a broken sensor.
+    assert Rangefinder(FakeSensor(distance=0.0)).read_mm() == 0
+    assert Rangefinder(FakeSensor(distance=-3.0)).read_mm() == -30
 
 
 def test_sensor_exception_becomes_none():
     assert Rangefinder(FakeSensor(raises=True)).read_mm() is None
+
+
+def test_nan_reading_becomes_none():
+    assert Rangefinder(FakeSensor(distance=float("nan"))).read_mm() is None
 
 
 def test_reads_temperature():
