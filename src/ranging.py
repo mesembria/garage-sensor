@@ -59,3 +59,41 @@ class Ranger:
 
         self._current = median(self._samples)
         return self._current
+
+
+class StillnessDetector:
+    """Detects that the vehicle has stopped moving, so the display can sleep."""
+
+    def __init__(self, still_mm=20, still_seconds=10.0, wake_move_mm=50):
+        self._still_mm = still_mm
+        self._still_seconds = still_seconds
+        self._wake_move_mm = wake_move_mm
+        self._reference = None
+        self._since = None
+
+    def reset(self):
+        """Forget the reference distance and the elapsed timer."""
+        self._reference = None
+        self._since = None
+
+    def update(self, distance_mm, now):
+        """Feed a filtered distance and the current time. Returns True when settled."""
+        if distance_mm is None:
+            self.reset()
+            return False
+
+        if self._reference is None:
+            self._reference = distance_mm
+            self._since = now
+            return False
+
+        if abs(distance_mm - self._reference) > self._wake_move_mm:
+            self._reference = distance_mm
+            self._since = now
+            return False
+
+        if abs(distance_mm - self._reference) > self._still_mm:
+            self._since = now
+            return False
+
+        return (now - self._since) >= self._still_seconds
