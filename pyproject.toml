@@ -1,0 +1,9 @@
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+# src/code.py is the CircuitPython entry point and must keep that exact name,
+# but it shadows the stdlib `code` module once src/ is on sys.path. pytest's
+# debugging plugin imports pdb -> code at startup, picks up ours, and dies on
+# `import board`, taking the whole collection down. Disabling that plugin is
+# the fix; the cost is that --pdb and --trace are unavailable in this project.
+addopts = "-p no:debugging"
