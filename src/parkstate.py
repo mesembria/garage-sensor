@@ -1,6 +1,7 @@
 """Display state machine. Pure logic: no hardware, no wall-clock reads."""
 
 import gauge
+from ranging import StillnessDetector
 
 
 class ParkStateMachine:
@@ -20,6 +21,9 @@ class ParkStateMachine:
         self._recover_good_reads = recover_good_reads
         self._calibrate_hold_s = calibrate_hold_s
         self._state = gauge.IDLE
+        self._stillness = StillnessDetector(still_mm=still_mm,
+                                            still_seconds=still_seconds,
+                                            wake_move_mm=wake_move_mm)
 
     @property
     def state(self):
@@ -28,7 +32,18 @@ class ParkStateMachine:
 
     def update(self, distance_mm, stop_mm, now, button_down, read_ok):
         """Advance the machine one tick and return the new state."""
-        self._state = self._parking_state(distance_mm, stop_mm)
+        parking = self._parking_state(distance_mm, stop_mm)
+
+        if parking == gauge.IDLE:
+            self._stillness.reset()
+            self._state = gauge.IDLE
+            return self._state
+
+        if self._stillness.update(distance_mm, now):
+            self._state = gauge.SETTLED
+            return self._state
+
+        self._state = parking
         return self._state
 
     def _parking_state(self, distance_mm, stop_mm):
