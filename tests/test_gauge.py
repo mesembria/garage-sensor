@@ -86,6 +86,14 @@ def test_approaching_lights_only_the_arc():
     assert len([c for c in frame if c != gauge.OFF]) == 3
 
 
+def test_approaching_floors_to_one_pixel_near_the_stop_point():
+    # A tiny non-zero fraction rounds to 0 lit pixels via lit_count, but the
+    # ring must never go dark while still APPROACHING.
+    frame = gauge.render(gauge.APPROACHING, 0.001, 12, 0, True, 0.0)
+    assert frame != [gauge.OFF] * 12
+    assert len([c for c in frame if c != gauge.OFF]) == 1
+
+
 def test_arrived_fills_the_whole_ring_red():
     assert gauge.render(gauge.ARRIVED, 0.0, 12, 0, True, 0.0) == [gauge.RED] * 12
 
