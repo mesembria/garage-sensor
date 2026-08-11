@@ -11,15 +11,11 @@ import neopixel
 import adafruit_us100
 
 import gauge
+import ringconfig
 import settings
 from parkstate import ParkStateMachine
 from ranging import Ranger
 from rangefinder import Rangefinder
-
-# --- Ring configuration. Change these three when swapping ring size. ---
-PIXEL_COUNT = 12
-PIXEL_ZERO_OFFSET = 0
-CLOCKWISE = True
 
 MAX_BRIGHTNESS = 0.3
 APPROACH_SPAN_MM = 2000
@@ -42,7 +38,7 @@ CALIBRATE_HOLD_S = 2.0
 uart = busio.UART(board.TX, board.RX, baudrate=9600, timeout=0.2)
 finder = Rangefinder(adafruit_us100.US100(uart))
 
-pixels = neopixel.NeoPixel(board.D5, PIXEL_COUNT,
+pixels = neopixel.NeoPixel(board.D5, ringconfig.PIXEL_COUNT,
                            brightness=MAX_BRIGHTNESS, auto_write=False)
 
 button = digitalio.DigitalInOut(board.D6)
@@ -100,10 +96,11 @@ while True:
         settings.save(microcontroller.nvm, stop_mm)
 
     fraction = gauge.approach_fraction(distance_mm, stop_mm, APPROACH_SPAN_MM)
-    frame = gauge.render(state, fraction, PIXEL_COUNT,
-                         PIXEL_ZERO_OFFSET, CLOCKWISE, phase_now)
+    frame = gauge.render(state, fraction, ringconfig.PIXEL_COUNT,
+                         ringconfig.PIXEL_ZERO_OFFSET, ringconfig.CLOCKWISE,
+                         phase_now)
 
-    for index in range(PIXEL_COUNT):
+    for index in range(ringconfig.PIXEL_COUNT):
         pixels[index] = frame[index]
     pixels.show()
 

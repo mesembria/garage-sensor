@@ -6,15 +6,13 @@ import board
 import neopixel
 
 import gauge
+import ringconfig
 
-PIXEL_COUNT = 12
-PIXEL_ZERO_OFFSET = 0
-CLOCKWISE = True
 MAX_BRIGHTNESS = 0.3
 
 SECONDS_PER_STATE = 4.0
 
-pixels = neopixel.NeoPixel(board.D5, PIXEL_COUNT,
+pixels = neopixel.NeoPixel(board.D5, ringconfig.PIXEL_COUNT,
                            brightness=MAX_BRIGHTNESS, auto_write=False)
 
 
@@ -23,20 +21,22 @@ def show(state, fraction, seconds):
     started = time.monotonic()
     while time.monotonic() - started < seconds:
         now = time.monotonic()
-        frame = gauge.render(state, fraction, PIXEL_COUNT,
-                             PIXEL_ZERO_OFFSET, CLOCKWISE, now)
-        for index in range(PIXEL_COUNT):
+        frame = gauge.render(state, fraction, ringconfig.PIXEL_COUNT,
+                             ringconfig.PIXEL_ZERO_OFFSET, ringconfig.CLOCKWISE,
+                             now)
+        for index in range(ringconfig.PIXEL_COUNT):
             pixels[index] = frame[index]
         pixels.show()
         time.sleep(0.02)
 
 
 print("Pixel walk: confirms count, offset, and direction.")
-for logical in range(PIXEL_COUNT):
-    for index in range(PIXEL_COUNT):
+for logical in range(ringconfig.PIXEL_COUNT):
+    for index in range(ringconfig.PIXEL_COUNT):
         pixels[index] = gauge.OFF
-    physical = gauge.physical_index(logical, PIXEL_COUNT,
-                                    PIXEL_ZERO_OFFSET, CLOCKWISE)
+    physical = gauge.physical_index(logical, ringconfig.PIXEL_COUNT,
+                                    ringconfig.PIXEL_ZERO_OFFSET,
+                                    ringconfig.CLOCKWISE)
     pixels[physical] = gauge.GREEN
     pixels.show()
     print("logical", logical, "-> physical", physical)
