@@ -102,7 +102,12 @@ class ParkStateMachine:
                     self._goods = 0
         else:
             self._goods = 0
-            self._fails += 1
+            # Bounded: _fails has no purpose once _in_fault is already True,
+            # and letting it climb forever would cross MicroPython's 31-bit
+            # small-int boundary after ~2.3 years at 15Hz and start
+            # heap-allocating every tick.
+            if self._fails < self._max_consec_fails:
+                self._fails += 1
             if self._fails >= self._max_consec_fails:
                 self._in_fault = True
         return self._in_fault
