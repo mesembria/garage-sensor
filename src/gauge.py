@@ -103,7 +103,12 @@ def render(state, fraction, pixel_count, zero_offset, clockwise, now):
 
     if state == FAULT:
         phase = (now * FAULT_PULSE_HZ) % 1.0
-        level = int(round(255 * (1.0 - abs(2.0 * phase - 1.0))))
+        # Floor at 24 so the dimmest point of the pulse is still visibly blue.
+        # Reaching exactly (0, 0, 0) would make a broken sensor pixel-for-pixel
+        # identical to IDLE for part of every cycle, undercutting the one rule
+        # that matters most here: a failed sensor must never look like nothing
+        # is wrong.
+        level = 24 + int(round(231 * (1.0 - abs(2.0 * phase - 1.0))))
         return [(0, 0, level)] * pixel_count
 
     if state == CALIBRATE:

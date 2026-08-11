@@ -110,6 +110,9 @@ def test_fault_is_blue_and_pulses():
     bright = gauge.render(gauge.FAULT, 0.0, 12, 0, True, 1.0)
     assert all(c[0] == 0 and c[1] == 0 for c in dim)
     assert bright[0][2] > dim[0][2]
+    # The dimmest point of the pulse must still be visibly blue, never fully
+    # off: a broken sensor must never be pixel-for-pixel identical to IDLE.
+    assert dim[0][2] > 0
 
 
 def test_calibrate_lights_a_single_moving_pixel():
