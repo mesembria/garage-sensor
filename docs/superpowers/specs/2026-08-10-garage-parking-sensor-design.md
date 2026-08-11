@@ -146,19 +146,29 @@ One leg to D6, other leg to GND. Internal pull-up, active low.
 
 ## Software architecture
 
-Only `code.py` imports `board`, `neopixel`, or `busio`. Every other module is pure logic
-and runs under pytest on a laptop.
+Only `code.py` and `selftest.py` import `board`, `neopixel`, or `busio`. Every other module
+is pure logic and runs under pytest on a laptop.
 
 | Module | Responsibility | Dependencies |
 |---|---|---|
-| `rangefinder.py` | Wrap `adafruit_us100`. Return distance in mm or `None`. | Injected UART object |
+| `rangefinder.py` | Wrap `adafruit_us100`. Return distance in mm or `None`. | Injected sensor object |
 | `ranging.py` | Sliding median, outlier rejection, stationary detection | None |
 | `gauge.py` | Map distance + state → list of RGB tuples | None |
+| `parkstate.py` | State machine over distance, button, and sensor health | `gauge`, `ranging` |
 | `settings.py` | Read/write stop distance to NVM | Injected NVM bytearray |
-| `code.py` | State machine, main loop, hardware binding | All of the above |
+| `code.py` | Main loop and hardware binding only | All of the above |
+| `selftest.py` | Walk every visual state on-device | `gauge` |
 
-`gauge.py` and `ranging.py` import nothing hardware-related, so ring-size swaps and filter
-behavior are testable off-device.
+The state machine lives in `parkstate.py` rather than `code.py` specifically so that every
+transition below can be tested off-device. `code.py` holds no decision logic at all — it
+reads the sensor, calls into the modules, and pushes the resulting frame to the ring.
+
+Time is injected everywhere: pure modules never call `time.monotonic()` themselves, so
+tests never sleep.
+
+CircuitPython lacks `typing`, `statistics`, `dataclasses`, and `enum`, and it evaluates
+annotations at definition time. Modules therefore carry no type annotations and use
+module-level string constants for states.
 
 ## Configuration constants
 
