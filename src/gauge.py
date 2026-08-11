@@ -83,12 +83,14 @@ def render(state, fraction, pixel_count, zero_offset, clockwise, now):
     if state == APPROACHING:
         color = arc_color(fraction)
         # lit_count rounds to zero for a stretch of small-but-nonzero fractions
-        # (with the shipped config, the last ~83mm before the stop point). Without
-        # the floor of one pixel, that stretch renders bit-identical to IDLE and
+        # (with the shipped config, the last ~83mm before the stop point), and
+        # fraction can legitimately be exactly 0.0 in APPROACHING too — the
+        # arrive tolerance and the approach span are independent, so the state
+        # machine can still report APPROACHING right at fraction 0. Without the
+        # floor of one pixel, either case renders bit-identical to IDLE and
         # SETTLED, so the ring appears to switch off right when the driver is
-        # closest and needs it most. APPROACHING is only reachable with
-        # fraction > 0, so flooring at one pixel here can never mask the actual
-        # stop point (ARRIVED takes over well before fraction reaches 0).
+        # closest and needs it most. Flooring at one pixel guarantees the ring
+        # is never fully dark while still guiding the driver in.
         lit = lit_count(fraction, pixel_count) or 1
         for index in arc_pixels(lit, pixel_count, zero_offset, clockwise):
             frame[index] = color

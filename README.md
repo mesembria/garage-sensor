@@ -93,7 +93,7 @@ Button: D6 to GND.
 **Pixel-zero contingency.** A WS2812B running at 5V wants a logic high of at
 least 0.7 × VDD = 3.5V, and the RP2040 drives 3.3V. This usually works, but
 the classic symptom when it doesn't is the *first pixel* misbehaving while the
-rest are fine. If that happens during the ring blink test (below), put a
+rest are fine. If that happens during the ring blink test (Bring-up sequence step 1, above), put a
 1N4001-class diode in series with the ring's 5V lead: it drops supply to
 ~4.3V and the threshold with it, to ~3.0V. A diode sits in a breadboard with
 no soldering. Don't add it pre-emptively — only insert it if pixel zero

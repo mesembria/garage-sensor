@@ -24,6 +24,11 @@ from rangefinder import Rangefinder
 PREVIEW_READINGS = 10
 SAMPLE_COUNT = 100
 SAMPLE_INTERVAL_S = 0.1
+# Matches code.py's MAX_VALID_MM. read_mm() returns 0, or an out-of-range
+# number, for a no-target reading, and reserves None for a driver failure
+# (the UART not answering) — so a valid distance sample must be checked for
+# both "present" and "in range", not just "not None".
+MAX_VALID_MM = 4000
 
 uart = busio.UART(board.TX, board.RX, baudrate=9600, timeout=0.2)
 finder = Rangefinder(adafruit_us100.US100(uart))
@@ -39,12 +44,14 @@ print("Collecting", SAMPLE_COUNT, "samples...")
 samples = []
 for _ in range(SAMPLE_COUNT):
     mm = finder.read_mm()
-    if mm is not None:
+    if mm is not None and 0 < mm <= MAX_VALID_MM:
         samples.append(mm)
     time.sleep(SAMPLE_INTERVAL_S)
 
 valid = len(samples)
+no_target = SAMPLE_COUNT - valid
 print("valid readings:", valid, "/", SAMPLE_COUNT)
+print("no-target/failed readings:", no_target, "/", SAMPLE_COUNT)
 
 if valid:
     ordered = sorted(samples)
