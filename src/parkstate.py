@@ -73,6 +73,8 @@ class ParkStateMachine:
             return self._state
 
         parking = self._parking_state(distance_mm, stop_mm)
+        # _parking is the underlying classification used for hysteresis; _state is
+        # what the display shows and may be SETTLED.
         self._parking = parking
 
         if parking == gauge.IDLE:

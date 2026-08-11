@@ -168,3 +168,17 @@ def test_no_calibration_without_a_valid_distance():
     step(m, None, 0.0, button_down=True)
     assert step(m, None, 2.0, button_down=True) == gauge.IDLE
     assert m.calibration_captured is None
+
+
+# Discriminates the FAULT branch's `self._parking = gauge.IDLE` reset: 650mm is
+# 50mm from the stop point, inside arrive_release_mm (60) but outside
+# arrive_tol_mm (30). Without the reset, the machine would still think it was
+# ARRIVED from before the fault and apply the wide release band, wrongly
+# reporting ARRIVED here. With the reset, the fresh reading is judged against
+# the tight arrival tolerance and correctly reports APPROACHING.
+def test_parking_classification_resets_after_a_fault():
+    m = ParkStateMachine(arrive_tol_mm=30, arrive_release_mm=60,
+                         max_consec_fails=1, recover_good_reads=1)
+    assert step(m, 620, 0.0) == gauge.ARRIVED
+    assert step(m, 620, 0.1, read_ok=False) == gauge.FAULT
+    assert step(m, 650, 0.2) == gauge.APPROACHING
