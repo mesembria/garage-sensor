@@ -53,3 +53,64 @@ def test_arc_works_for_other_ring_sizes():
         assert len(gauge.arc_pixels(count, count, 0, True)) == count
         assert sorted(gauge.arc_pixels(count, count, 0, True)) == list(range(count))
         assert gauge.arc_pixels(1, count, 0, True) == [0]
+
+
+def test_arc_color_endpoints():
+    assert gauge.arc_color(1.0) == gauge.GREEN
+    assert gauge.arc_color(0.0) == gauge.AMBER
+
+
+def test_arc_color_interpolates():
+    mid = gauge.arc_color(0.5)
+    assert gauge.AMBER[0] > mid[0] > gauge.GREEN[0]
+    assert gauge.GREEN[1] > mid[1] > gauge.AMBER[1]
+
+
+def test_render_returns_one_color_per_pixel():
+    for state in (gauge.IDLE, gauge.APPROACHING, gauge.ARRIVED,
+                  gauge.OVERSHOOT, gauge.SETTLED, gauge.CALIBRATE,
+                  gauge.FAULT, gauge.UNCALIBRATED):
+        frame = gauge.render(state, 0.5, 12, 0, True, 0.0)
+        assert len(frame) == 12
+        assert all(len(c) == 3 for c in frame)
+
+
+def test_idle_and_settled_are_dark():
+    assert gauge.render(gauge.IDLE, 0.5, 12, 0, True, 0.0) == [gauge.OFF] * 12
+    assert gauge.render(gauge.SETTLED, 0.5, 12, 0, True, 0.0) == [gauge.OFF] * 12
+
+
+def test_approaching_lights_only_the_arc():
+    frame = gauge.render(gauge.APPROACHING, 0.25, 12, 0, True, 0.0)
+    assert frame.count(gauge.OFF) == 9
+    assert len([c for c in frame if c != gauge.OFF]) == 3
+
+
+def test_arrived_fills_the_whole_ring_red():
+    assert gauge.render(gauge.ARRIVED, 0.0, 12, 0, True, 0.0) == [gauge.RED] * 12
+
+
+def test_overshoot_flashes_at_two_hertz():
+    on = gauge.render(gauge.OVERSHOOT, 0.0, 12, 0, True, 0.0)
+    off = gauge.render(gauge.OVERSHOOT, 0.0, 12, 0, True, 0.25)
+    assert on == [gauge.RED] * 12
+    assert off == [gauge.OFF] * 12
+
+
+def test_fault_is_blue_and_pulses():
+    dim = gauge.render(gauge.FAULT, 0.0, 12, 0, True, 0.0)
+    bright = gauge.render(gauge.FAULT, 0.0, 12, 0, True, 1.0)
+    assert all(c[0] == 0 and c[1] == 0 for c in dim)
+    assert bright[0][2] > dim[0][2]
+
+
+def test_calibrate_lights_a_single_moving_pixel():
+    frame = gauge.render(gauge.CALIBRATE, 0.0, 12, 0, True, 0.0)
+    assert len([c for c in frame if c != gauge.OFF]) == 1
+    later = gauge.render(gauge.CALIBRATE, 0.0, 12, 0, True, 0.5)
+    assert frame != later
+
+
+def test_uncalibrated_shows_opposing_amber_pixels():
+    frame = gauge.render(gauge.UNCALIBRATED, 0.0, 12, 0, True, 0.0)
+    assert len([c for c in frame if c == gauge.AMBER]) == 2

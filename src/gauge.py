@@ -39,3 +39,78 @@ def arc_pixels(lit, pixel_count, zero_offset, clockwise):
                    key=lambda k: (min(k, pixel_count - k), k))
     return [physical_index(k, pixel_count, zero_offset, clockwise)
             for k in order[:lit]]
+
+
+GREEN = (0, 255, 0)
+AMBER = (255, 140, 0)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+OFF = (0, 0, 0)
+
+IDLE = "idle"
+APPROACHING = "approaching"
+ARRIVED = "arrived"
+OVERSHOOT = "overshoot"
+SETTLED = "settled"
+CALIBRATE = "calibrate"
+FAULT = "fault"
+UNCALIBRATED = "uncalibrated"
+
+OVERSHOOT_FLASH_HZ = 2.0
+FAULT_PULSE_HZ = 0.5
+CALIBRATE_SPIN_HZ = 1.0
+
+
+def _lerp(a, b, t):
+    return int(round(a + (b - a) * t))
+
+
+def arc_color(fraction):
+    """Green when far, amber at the stop point, interpolated in between."""
+    t = 1.0 - fraction
+    return (_lerp(GREEN[0], AMBER[0], t),
+            _lerp(GREEN[1], AMBER[1], t),
+            _lerp(GREEN[2], AMBER[2], t))
+
+
+def render(state, fraction, pixel_count, zero_offset, clockwise, now):
+    """Return a list of (r, g, b) tuples, one per physical pixel."""
+    frame = [OFF] * pixel_count
+
+    if state == IDLE or state == SETTLED:
+        return frame
+
+    if state == APPROACHING:
+        color = arc_color(fraction)
+        for index in arc_pixels(lit_count(fraction, pixel_count),
+                                pixel_count, zero_offset, clockwise):
+            frame[index] = color
+        return frame
+
+    if state == ARRIVED:
+        return [RED] * pixel_count
+
+    if state == OVERSHOOT:
+        phase = (now * OVERSHOOT_FLASH_HZ) % 1.0
+        return [RED] * pixel_count if phase < 0.5 else frame
+
+    if state == FAULT:
+        phase = (now * FAULT_PULSE_HZ) % 1.0
+        level = int(round(255 * (1.0 - abs(2.0 * phase - 1.0))))
+        return [(0, 0, level)] * pixel_count
+
+    if state == CALIBRATE:
+        phase = (now * CALIBRATE_SPIN_HZ) % 1.0
+        logical = int(phase * pixel_count) % pixel_count
+        frame[physical_index(logical, pixel_count, zero_offset, clockwise)] = GREEN
+        return frame
+
+    if state == UNCALIBRATED:
+        phase = (now * CALIBRATE_SPIN_HZ) % 1.0
+        logical = int(phase * pixel_count) % pixel_count
+        opposite = (logical + pixel_count // 2) % pixel_count
+        frame[physical_index(logical, pixel_count, zero_offset, clockwise)] = AMBER
+        frame[physical_index(opposite, pixel_count, zero_offset, clockwise)] = AMBER
+        return frame
+
+    return frame
