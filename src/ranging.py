@@ -70,11 +70,13 @@ class StillnessDetector:
         self._wake_move_mm = wake_move_mm
         self._reference = None
         self._since = None
+        self._settled = False
 
     def reset(self):
         """Forget the reference distance and the elapsed timer."""
         self._reference = None
         self._since = None
+        self._settled = False
 
     def update(self, distance_mm, now):
         """Feed a filtered distance and the current time. Returns True when settled."""
@@ -90,10 +92,18 @@ class StillnessDetector:
         if abs(distance_mm - self._reference) > self._wake_move_mm:
             self._reference = distance_mm
             self._since = now
+            self._settled = False
             return False
+
+        if self._settled:
+            return True
 
         if abs(distance_mm - self._reference) > self._still_mm:
             self._since = now
             return False
 
-        return (now - self._since) >= self._still_seconds
+        if (now - self._since) >= self._still_seconds:
+            self._settled = True
+            return True
+
+        return False

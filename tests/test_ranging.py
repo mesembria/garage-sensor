@@ -1,4 +1,4 @@
-from ranging import Ranger, median
+from ranging import Ranger, median, StillnessDetector
 
 
 def test_median_odd_and_even():
@@ -56,9 +56,6 @@ def test_recovers_after_no_target():
     assert r.push(700) == 700
 
 
-from ranging import StillnessDetector
-
-
 def test_reports_settled_after_the_hold_period():
     d = StillnessDetector(still_mm=20, still_seconds=10.0)
     assert d.update(1000, 0.0) is False
@@ -102,3 +99,11 @@ def test_reset_clears_state():
     d.update(1000, 0.0)
     d.reset()
     assert d.update(1000, 10.0) is False
+
+
+def test_settled_survives_drift_within_the_wake_threshold():
+    d = StillnessDetector(still_mm=20, still_seconds=10.0, wake_move_mm=50)
+    d.update(1000, 0.0)
+    assert d.update(1000, 10.0) is True
+    assert d.update(1030, 11.0) is True
+    assert d.update(1060, 12.0) is False
