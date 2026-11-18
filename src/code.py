@@ -36,7 +36,7 @@ RECOVER_GOOD_READS = 3
 CALIBRATE_HOLD_S = 2.0
 
 uart = busio.UART(board.TX, board.RX, baudrate=9600, timeout=0.2)
-finder = Rangefinder(adafruit_us100.US100(uart))
+finder = Rangefinder(adafruit_us100.US100(uart), uart)
 
 pixels = neopixel.NeoPixel(board.D5, ringconfig.PIXEL_COUNT,
                            brightness=MAX_BRIGHTNESS, auto_write=False)
