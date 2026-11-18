@@ -142,3 +142,7 @@ knob, even though it isn't currently exposed as a `code.py` constant.
 | Slow blue pulse | Sensor fault — the reading is not trustworthy |
 | One green pixel rotating | Calibration in progress — keep holding the button |
 | Two rotating amber pixels | Never calibrated; hold the button while parked |
+
+## License
+
+MIT. See [LICENSE](LICENSE).
