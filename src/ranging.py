@@ -108,6 +108,12 @@ class StillnessDetector:
             return True
 
         if abs(distance_mm - self._reference) > self._still_mm:
+            # Re-anchor on the new position, not just restart the timer. A car
+            # that comes to rest 21-50mm past the reference is otherwise
+            # measured against a reference that never moves (too close to
+            # trip wake_move_mm above), so the timer restarts every tick, the
+            # detector never settles, and the ring stays solid red overnight.
+            self._reference = distance_mm
             self._since = now
             return False
 

@@ -208,3 +208,13 @@ def test_parking_classification_resets_after_a_fault():
     assert step(m, 620, 0.0) == gauge.ARRIVED
     assert step(m, 620, 0.1, read_ok=False) == gauge.FAULT
     assert step(m, 650, 0.2) == gauge.APPROACHING
+
+
+def test_arrived_settles_when_parked_between_still_and_wake_thresholds():
+    # Regression for the ring staying solid red overnight: the last reference
+    # was taken 35mm before the car came to rest, inside the stop zone.
+    m = ParkStateMachine(still_mm=20, still_seconds=10.0, wake_move_mm=50,
+                         arrive_tol_mm=30)
+    assert step(m, 1020, 0.0, stop_mm=1000) == gauge.ARRIVED
+    assert step(m, 985, 1.0, stop_mm=1000) == gauge.ARRIVED
+    assert step(m, 985, 60.0, stop_mm=1000) == gauge.SETTLED
