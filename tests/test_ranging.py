@@ -107,3 +107,15 @@ def test_settled_survives_drift_within_the_wake_threshold():
     assert d.update(1000, 10.0) is True
     assert d.update(1030, 11.0) is True
     assert d.update(1060, 12.0) is False
+
+
+def test_settles_when_the_car_stops_between_still_and_wake_thresholds():
+    # Regression: the car stops 21-50mm past the last reference. That gap is
+    # too big to count as still but too small to re-anchor as a move, so the
+    # timer restarted every tick against a reference that never moved, and
+    # the detector never settled. The ring held solid red overnight.
+    d = StillnessDetector(still_mm=20, still_seconds=10.0, wake_move_mm=50)
+    d.update(1000, 0.0)
+    assert d.update(965, 1.0) is False
+    assert d.update(965, 10.9) is False
+    assert d.update(965, 11.0) is True
